@@ -1,7 +1,17 @@
-import React, { useReducer, useCallback, useEffect } from 'react';
-import { View, FlatList, StyleSheet, SafeAreaView, Pressable, Text } from 'react-native';
+import React, { useReducer, useCallback, useEffect, useRef, useState } from 'react';
+import { View, FlatList, StyleSheet, SafeAreaView, Pressable, Text, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { colors, fonts } from '../theme';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import Cell from './Cell';
 import HUD from './HUD';
+import ScoreToast from './ScoreToast';
+import WinOverlay from './WinOverlay';
 import { GameState, GameAction } from '../types/game';
 import { useHighScore } from '../utils/useHighScore';
 import {
@@ -15,6 +25,7 @@ import {
   isGameWon,
   getMatchDistance,
   hasValidMoves,
+  findHint,
   COLS,
 } from '../utils/gameLogic';
 
@@ -26,9 +37,17 @@ const initialState: GameState = {
   gameOver: false,
   canAppend: false,
   appendCount: 0,
+  appendParity: 1,
+  hintsRemaining: 3,
+  hintCells: null,
+  highlightAppend: false,
 };
 
 function reducer(state: GameState, action: GameAction): GameState {
+  // Clear any active hint on every action except HINT/CLEAR_HINT
+  if (action.type !== 'HINT' && action.type !== 'CLEAR_HINT') {
+    state = { ...state, hintCells: null, highlightAppend: false };
+  }
   switch (action.type) {
     case 'SELECT_CELL': {
       const { cells, score, moves } = state;
@@ -60,14 +79,17 @@ function reducer(state: GameState, action: GameAction): GameState {
         const matched = applyMatch(cells, first, tapped);
         const newCells = collapseEmptyRows(matched);
         const newScore = score + 2 + distance;
+        const newMoves = moves + 1;
         const won = isGameWon(newCells);
+        const earnedHint = newMoves % 5 === 0 ? 1 : 0;
         return {
           ...state,
           cells: newCells,
           score: newScore,
-          moves: moves + 1,
+          moves: newMoves,
           gameOver: won,
           canAppend: !won && !hasValidMoves(newCells),
+          hintsRemaining: state.hintsRemaining + earnedHint,
         };
       }
 
@@ -79,12 +101,13 @@ function reducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'APPEND_ROWS': {
-      const newCells = appendRows(state.cells);
+      const newCells = appendRows(state.cells, state.appendParity);
       return {
         ...state,
         cells: newCells,
         canAppend: !hasValidMoves(newCells),
         appendCount: state.appendCount + 1,
+        appendParity: state.appendParity === 0 ? 1 : 0,
       };
     }
 
@@ -98,11 +121,27 @@ function reducer(state: GameState, action: GameAction): GameState {
         gameOver: false,
         canAppend: !hasValidMoves(newCells),
         appendCount: 0,
+        appendParity: 1,
       };
     }
 
     case 'RESET': {
       return { ...initialState, cells: generateBoard() };
+    }
+
+    case 'HINT': {
+      if (state.hintsRemaining <= 0) return state;
+      const remaining = state.hintsRemaining - 1;
+      if (state.canAppend) {
+        return { ...state, highlightAppend: true, hintsRemaining: remaining };
+      }
+      const pair = findHint(state.cells);
+      if (!pair) return state;
+      return { ...state, hintCells: pair, hintsRemaining: remaining };
+    }
+
+    case 'CLEAR_HINT': {
+      return { ...state, hintCells: null, highlightAppend: false };
     }
 
     default:
@@ -112,11 +151,32 @@ function reducer(state: GameState, action: GameAction): GameState {
 
 export default function GameBoard() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { cells, score, moves, stage, gameOver, canAppend, appendCount } = state;
+  const { cells, score, moves, stage, gameOver, canAppend, appendCount, hintsRemaining, hintCells, highlightAppend } = state;
   const { highScore, updateHighScore } = useHighScore();
 
+  // Score toast + haptics
+  const prevScoreRef = useRef(score);
+  const [toast, setToast] = useState<{ id: number; value: number } | null>(null);
   useEffect(() => {
-    if (gameOver) updateHighScore(score);
+    const earned = score - prevScoreRef.current;
+    if (earned > 0) {
+      setToast(t => ({ id: (t?.id ?? 0) + 1, value: earned }));
+      if (earned >= 8) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (earned >= 5) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+    prevScoreRef.current = score;
+  }, [score]);
+
+  useEffect(() => {
+    if (gameOver) {
+      updateHighScore(score);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
   }, [gameOver]);
 
   const handlePress = useCallback((id: number) => {
@@ -124,11 +184,17 @@ export default function GameBoard() {
   }, []);
 
   const handleAppend = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     dispatch({ type: 'APPEND_ROWS' });
   }, []);
 
   const handleReset = useCallback(() => {
     dispatch({ type: 'RESET' });
+  }, []);
+
+  const handleHint = useCallback(() => {
+    dispatch({ type: 'HINT' });
+    setTimeout(() => dispatch({ type: 'CLEAR_HINT' }), 2000);
   }, []);
 
   const handleNextStage = useCallback(() => {
@@ -148,11 +214,17 @@ export default function GameBoard() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <LinearGradient
+      colors={[colors.bgGradientTop, colors.bgGradientBottom]}
+      style={styles.gradient}
+    >
+      <SafeAreaView style={styles.container}>
       <HUD score={score} moves={moves} stage={stage} highScore={highScore} />
+      <View style={styles.hudDivider} />
       <FlatList
         data={rows}
         keyExtractor={(_, i) => String(i)}
+        showsVerticalScrollIndicator={false}
         renderItem={({ item: row }) => (
           <View style={styles.row}>
             {row.map((cell, i) =>
@@ -162,6 +234,8 @@ export default function GameBoard() {
                   value={cell.value}
                   cleared={cell.cleared}
                   selected={cell.selected}
+                  hinted={hintCells !== null && (hintCells[0] === cell.id || hintCells[1] === cell.id)}
+                  generation={cell.generation}
                   onPress={() => handlePress(cell.id)}
                 />
               ) : (
@@ -175,7 +249,7 @@ export default function GameBoard() {
       <View style={styles.footer}>
         <View style={styles.badgeWrapper}>
           <Pressable
-            style={styles.button}
+            style={[styles.button, highlightAppend && styles.buttonHighlight]}
             onPress={handleAppend}
           >
             <Text style={styles.buttonText}>+ Add Numbers</Text>
@@ -186,58 +260,85 @@ export default function GameBoard() {
             </View>
           )}
         </View>
+        <View style={styles.badgeWrapper}>
+          <Pressable
+            style={[styles.button, hintsRemaining === 0 && styles.buttonDisabled]}
+            onPress={handleHint}
+            disabled={hintsRemaining === 0}
+          >
+            <Text style={styles.buttonText}>Hint</Text>
+          </Pressable>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{hintsRemaining}</Text>
+          </View>
+        </View>
         <Pressable style={[styles.button, styles.resetButton]} onPress={handleReset}>
           <Text style={styles.buttonText}>New Game</Text>
         </Pressable>
       </View>
+      {toast && <ScoreToast value={toast.value} id={toast.id} />}
       {gameOver && (
-        <View style={styles.overlay}>
-          <Text style={styles.winText}>Stage {stage} Complete! 🎉</Text>
-          <Text style={styles.winSubtext}>Score: {score}</Text>
-          <Pressable style={styles.button} onPress={handleNextStage}>
-            <Text style={styles.buttonText}>Stage {stage + 1} →</Text>
-          </Pressable>
-          <Pressable style={[styles.button, styles.resetButton]} onPress={handleReset}>
-            <Text style={styles.buttonText}>New Game</Text>
-          </Pressable>
-        </View>
+        <WinOverlay
+          stage={stage}
+          score={score}
+          onNextStage={handleNextStage}
+          onReset={handleReset}
+        />
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#0f0f1a',
   },
   board: {
     paddingHorizontal: 10,
+    paddingTop: 8,
+    overflow: 'visible',
   },
   row: {
     flexDirection: 'row',
+    overflow: 'visible',
   },
   pad: {
     width: 0,
     height: 0,
+  },
+  hudDivider: {
+    height: 1,
+    backgroundColor: colors.cellBorder,
+    opacity: 0.4,
+    marginHorizontal: 16,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 12,
     padding: 12,
+    paddingBottom: 20,
   },
   button: {
-    backgroundColor: '#4f46e5',
+    backgroundColor: colors.buttonPrimary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   resetButton: {
-    backgroundColor: '#374151',
+    backgroundColor: colors.buttonReset,
   },
   buttonDisabled: {
-    opacity: 0.3,
+    opacity: colors.buttonDisabledOpacity,
+  },
+  buttonHighlight: {
+    backgroundColor: colors.buttonHighlight,
+    borderWidth: 1,
+    borderColor: colors.buttonHighlightBorder,
   },
   badgeWrapper: {
     position: 'relative',
@@ -246,7 +347,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#e11d48',
+    backgroundColor: colors.badgeBg,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -255,31 +356,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
-    color: '#fff',
+    color: colors.badgeText,
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
     fontSize: 14,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-  },
-  winText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  winSubtext: {
-    color: '#818cf8',
-    fontSize: 18,
-    fontWeight: '600',
   },
 });

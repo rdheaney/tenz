@@ -8,7 +8,7 @@ export function generateBoard(): Cell[] {
     const j = Math.floor(Math.random() * (i + 1));
     [values[i], values[j]] = [values[j], values[i]];
   }
-  return values.map((value, id) => ({ id, value, cleared: false, selected: false }));
+  return values.map((value, id) => ({ id, value, cleared: false, selected: false, generation: 0 }));
 }
 
 export function getSelectedCells(cells: Cell[]): Cell[] {
@@ -112,13 +112,14 @@ export function clearSelections(cells: Cell[]): Cell[] {
   return cells.map(c => ({ ...c, selected: false }));
 }
 
-export function appendRows(cells: Cell[]): Cell[] {
+export function appendRows(cells: Cell[], generation: number): Cell[] {
   const uncleared = cells.filter(c => !c.cleared);
   const startId = cells.length;
   const newCells = uncleared.map((c, i) => ({
     ...c,
     id: startId + i,
     selected: false,
+    generation,
   }));
   return [...cells, ...newCells];
 }
@@ -146,4 +147,16 @@ export function hasValidMoves(cells: Cell[]): boolean {
 
 export function isGameWon(cells: Cell[]): boolean {
   return cells.every(c => c.cleared);
+}
+
+export function findHint(cells: Cell[]): [number, number] | null {
+  const active = cells.filter(c => !c.cleared);
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      if (isValidMatch(cells, active[i], active[j])) {
+        return [active[i].id, active[j].id];
+      }
+    }
+  }
+  return null;
 }

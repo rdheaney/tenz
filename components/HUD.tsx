@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors, fonts } from '../theme';
 
 type Props = {
   score: number;
@@ -41,28 +42,28 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#64748b',
+    fontFamily: fonts.bold,
+    color: colors.hudLabel,
     letterSpacing: 1,
   },
   value: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#e2e8f0',
+    fontFamily: fonts.bold,
+    color: colors.hudValue,
   },
   titleGroup: {
     alignItems: 'center',
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#818cf8',
+    fontFamily: fonts.extraBold,
+    color: colors.hudTitle,
     letterSpacing: 1,
   },
   stage: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
+    fontFamily: fonts.semiBold,
+    color: colors.hudStage,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
