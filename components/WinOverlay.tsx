@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
 import { colors, fonts } from '../theme';
+
+const AnimatedSvg = Animated.createAnimatedComponent(Svg);
 
 type Props = {
   stage: number;
@@ -39,10 +42,23 @@ export default function WinOverlay({ stage, score, onNextStage, onReset }: Props
 
   return (
     <View style={styles.backdrop}>
-      <Animated.View style={[styles.glow4, { opacity: glowOpacity }]} />
-      <Animated.View style={[styles.glow3, { opacity: glowOpacity }]} />
-      <Animated.View style={[styles.glow2, { opacity: glowOpacity }]} />
-      <Animated.View style={[styles.glow1, { opacity: glowOpacity }]} />
+      <AnimatedSvg
+        style={[StyleSheet.absoluteFill, { opacity: glowOpacity }]}
+        width="100%"
+        height="100%"
+        viewBox="0 0 400 800"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <Defs>
+          <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor={colors.winGlow} stopOpacity="0.8" />
+            <Stop offset="35%" stopColor={colors.winGlow} stopOpacity="0.35" />
+            <Stop offset="65%" stopColor={colors.winGlow} stopOpacity="0.1" />
+            <Stop offset="100%" stopColor={colors.winGlow} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Ellipse cx="200" cy="400" rx="260" ry="260" fill="url(#glow)" />
+      </AnimatedSvg>
       <Animated.View style={[styles.card, { transform: [{ scale }], opacity }]}>
         <Text style={styles.winText}>Stage {stage} Complete!</Text>
         <Text style={styles.winSubtext}>Score: {score}</Text>
@@ -63,38 +79,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.overlayBg,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glow1: {
-    position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: colors.winGlow,
-    opacity: 0.45,
-  },
-  glow2: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: colors.winGlow,
-    opacity: 0.25,
-  },
-  glow3: {
-    position: 'absolute',
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    backgroundColor: colors.winGlow,
-    opacity: 0.12,
-  },
-  glow4: {
-    position: 'absolute',
-    width: 480,
-    height: 480,
-    borderRadius: 240,
-    backgroundColor: colors.winGlow,
-    opacity: 0.05,
   },
   card: {
     alignItems: 'center',

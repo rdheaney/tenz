@@ -33,8 +33,9 @@ export const colors = {
   buttonDisabledOpacity: 0.3,
 
   // Badge
-  badgeBg: '#e11d48',
-  badgeText: '#ffffff',
+  badgeBg: '#0c4a6e',
+  badgeBorder: '#22d3ee',
+  badgeText: '#e0f2fe',
 
   // Toast
   toastNormal: '#38bdf8',

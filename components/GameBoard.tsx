@@ -348,6 +348,8 @@ const styles = StyleSheet.create({
     top: -8,
     right: -8,
     backgroundColor: colors.badgeBg,
+    borderWidth: 1,
+    borderColor: colors.badgeBorder,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
