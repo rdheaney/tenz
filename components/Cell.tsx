@@ -20,13 +20,32 @@ const Cell = memo(({ value, cleared, selected, hinted, generation, onPress }: Pr
 
   // Select pulse
   useEffect(() => {
-    Animated.spring(scale, {
-      toValue: selected ? 1.15 : 1,
-      useNativeDriver: true,
-      speed: 30,
-      bounciness: 8,
-    }).start();
-  }, [selected]);
+    scale.stopAnimation();
+    if (selected) {
+      Animated.spring(scale, {
+        toValue: 1.15,
+        useNativeDriver: true,
+        speed: 28,
+        bounciness: 6,
+      }).start();
+    } else {
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    return () => {
+      scale.stopAnimation();
+    };
+  }, [selected, scale]);
+
+  useEffect(() => {
+    if (cleared) {
+      scale.setValue(1);
+    }
+  }, [cleared, scale]);
 
   if (cleared) {
     return <Pressable style={styles.cleared} />;
