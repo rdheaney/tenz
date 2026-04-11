@@ -4,7 +4,7 @@ export const COLS = 9;
 
 export function generateBoard(): Cell[] {
   const base = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-  const values = [...base, ...base, ...base, ...base, 1, 2, 3, 4, 5, 6];
+  const values = [...base, ...base, ...base, ...base, ...base, ...base];
   for (let i = values.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [values[i], values[j]] = [values[j], values[i]];

@@ -1,6 +1,7 @@
 import React, { useReducer, useCallback, useEffect, useRef, useState } from 'react';
-import { View, FlatList, StyleSheet, SafeAreaView, Pressable, Text, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, FlatList, StyleSheet, SafeAreaView, Pressable, Text, LayoutAnimation, Platform, UIManager, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Defs, Ellipse, LinearGradient as SvgLinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts } from '../theme';
 import HelpOverlay from './HelpOverlay';
@@ -40,7 +41,7 @@ const initialState: GameState = {
   canAppend: false,
   appendCount: 0,
   appendParity: 1,
-  hintsRemaining: 3,
+  hintsRemaining: 2,
   hintCells: null,
   highlightAppend: false,
 };
@@ -83,7 +84,7 @@ function reducer(state: GameState, action: GameAction): GameState {
         const newScore = score + 2 + distance;
         const newMoves = moves + 1;
         const won = isGameWon(newCells);
-        const earnedHint = newMoves % 5 === 0 ? 1 : 0;
+        const earnedHint = newMoves % 10 === 0 ? 1 : 0;
         return {
           ...state,
           cells: newCells,
@@ -91,7 +92,7 @@ function reducer(state: GameState, action: GameAction): GameState {
           moves: newMoves,
           gameOver: won,
           canAppend: !won && !hasValidMoves(newCells),
-          hintsRemaining: state.hintsRemaining + earnedHint,
+          hintsRemaining: Math.min(6, state.hintsRemaining + earnedHint),
         };
       }
 
@@ -222,6 +223,42 @@ export default function GameBoard() {
       colors={[colors.bgGradientTop, colors.bgGradientBottom]}
       style={styles.gradient}
     >
+      <View style={styles.atmosphere} pointerEvents="none">
+        <Svg style={styles.atmosphereSvg} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <Defs>
+            <SvgLinearGradient id="wash" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor="#67e8f9" stopOpacity="0.12" />
+              <Stop offset="45%" stopColor="#38bdf8" stopOpacity="0.03" />
+              <Stop offset="100%" stopColor="#38bdf8" stopOpacity="0.16" />
+            </SvgLinearGradient>
+            <RadialGradient id="mistA" cx="28%" cy="14%" r="38%">
+              <Stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.24" />
+              <Stop offset="60%" stopColor="#7dd3fc" stopOpacity="0.06" />
+              <Stop offset="100%" stopColor="#7dd3fc" stopOpacity="0" />
+            </RadialGradient>
+            <RadialGradient id="mistB" cx="75%" cy="72%" r="44%">
+              <Stop offset="0%" stopColor="#22d3ee" stopOpacity="0.2" />
+              <Stop offset="58%" stopColor="#22d3ee" stopOpacity="0.07" />
+              <Stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+            </RadialGradient>
+            <RadialGradient id="mistC" cx="62%" cy="32%" r="30%">
+              <Stop offset="0%" stopColor="#bae6fd" stopOpacity="0.14" />
+              <Stop offset="65%" stopColor="#bae6fd" stopOpacity="0.04" />
+              <Stop offset="100%" stopColor="#bae6fd" stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100" height="100" fill="url(#wash)" />
+          <Ellipse cx="24" cy="16" rx="38" ry="26" fill="url(#mistA)" />
+          <Ellipse cx="78" cy="76" rx="44" ry="34" fill="url(#mistB)" />
+          <Ellipse cx="62" cy="32" rx="26" ry="18" fill="url(#mistC)" />
+        </Svg>
+        <Image
+          source={require('../assets/overlay.png')}
+          resizeMode="cover"
+          blurRadius={1}
+          style={styles.textureImage}
+        />
+      </View>
       <SafeAreaView style={styles.container}>
       <HUD score={score} moves={moves} stage={stage} highScore={highScore} onHelp={() => setShowHelp(true)} />
       <View style={styles.hudDivider} />
@@ -306,6 +343,22 @@ export default function GameBoard() {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+  },
+  atmosphere: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  textureImage: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.16,
+    transform: [{ scale: 1.03 }],
+  },
+  atmosphereSvg: {
+    ...StyleSheet.absoluteFillObject,
   },
   container: {
     flex: 1,
