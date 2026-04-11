@@ -51,9 +51,9 @@ export default function WinOverlay({ stage, score, onNextStage, onReset }: Props
       >
         <Defs>
           <RadialGradient id="glow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={colors.winGlow} stopOpacity="0.8" />
-            <Stop offset="35%" stopColor={colors.winGlow} stopOpacity="0.35" />
-            <Stop offset="65%" stopColor={colors.winGlow} stopOpacity="0.1" />
+            <Stop offset="0%" stopColor={colors.winGlow} stopOpacity="1" />
+            <Stop offset="35%" stopColor={colors.winGlow} stopOpacity="0.6" />
+            <Stop offset="65%" stopColor={colors.winGlow} stopOpacity="0.2" />
             <Stop offset="100%" stopColor={colors.winGlow} stopOpacity="0" />
           </RadialGradient>
         </Defs>

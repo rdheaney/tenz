@@ -13,7 +13,7 @@ import GameBoard from './components/GameBoard';
 
 SplashScreen.preventAutoHideAsync();
 
-const HOLD_MS = 2500;
+const HOLD_MS = 3000;
 const FADE_MS = 400;
 
 export default function App() {

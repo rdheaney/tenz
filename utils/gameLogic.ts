@@ -3,7 +3,8 @@ import { Cell } from '../types/game';
 export const COLS = 9;
 
 export function generateBoard(): Cell[] {
-  const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const base = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const values = [...base, ...base, ...base, ...base, 1, 2, 3, 4, 5, 6];
   for (let i = values.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [values[i], values[j]] = [values[j], values[i]];

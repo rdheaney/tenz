@@ -1,12 +1,12 @@
 export const colors = {
   // Backgrounds
   bgGradientTop: '#071a2e',
-  bgGradientBottom: '#0a2540',
+  bgGradientBottom: '#0d3d6b',
   cellBg: '#0d3050',
   cellBgAppended: '#0d3d3d',
-  cellBorder: '#1a5276',
-  cellBorderAppended: '#1a5c5c',
-  clearedBorder: '#0a2540',
+  cellBorder: '#3d8fc4',
+  cellBorderAppended: '#2aacac',
+  clearedBorder: '#1a3a5c',
 
   // Selected / hinted
   selectedBg: '#0e7490',
@@ -41,6 +41,9 @@ export const colors = {
   toastNormal: '#38bdf8',
   toastMedium: '#fb923c',
   toastHigh: '#f43f5e',
+
+  // Card / modal
+  cardBg: '#0a2540',
 
   // Win overlay
   overlayBg: 'rgba(7,26,46,0.93)',

@@ -3,6 +3,8 @@ import { View, FlatList, StyleSheet, SafeAreaView, Pressable, Text, LayoutAnimat
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts } from '../theme';
+import HelpOverlay from './HelpOverlay';
+import ConfirmOverlay from './ConfirmOverlay';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -157,6 +159,8 @@ export default function GameBoard() {
   // Score toast + haptics
   const prevScoreRef = useRef(score);
   const [toast, setToast] = useState<{ id: number; value: number } | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showConfirmReset, setShowConfirmReset] = useState(false);
   useEffect(() => {
     const earned = score - prevScoreRef.current;
     if (earned > 0) {
@@ -189,7 +193,7 @@ export default function GameBoard() {
   }, []);
 
   const handleReset = useCallback(() => {
-    dispatch({ type: 'RESET' });
+    setShowConfirmReset(true);
   }, []);
 
   const handleHint = useCallback(() => {
@@ -219,7 +223,7 @@ export default function GameBoard() {
       style={styles.gradient}
     >
       <SafeAreaView style={styles.container}>
-      <HUD score={score} moves={moves} stage={stage} highScore={highScore} />
+      <HUD score={score} moves={moves} stage={stage} highScore={highScore} onHelp={() => setShowHelp(true)} />
       <View style={styles.hudDivider} />
       <FlatList
         data={rows}
@@ -252,7 +256,7 @@ export default function GameBoard() {
             style={[styles.button, highlightAppend && styles.buttonHighlight]}
             onPress={handleAppend}
           >
-            <Text style={styles.buttonText}>+ Add Numbers</Text>
+            <Text style={styles.buttonText}>+ Numbers</Text>
           </Pressable>
           {appendCount > 0 && (
             <View style={styles.badge}>
@@ -277,6 +281,15 @@ export default function GameBoard() {
         </Pressable>
       </View>
       {toast && <ScoreToast value={toast.value} id={toast.id} />}
+      {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
+      {showConfirmReset && (
+        <ConfirmOverlay
+          message="Start a new game? Your current progress will be lost."
+          confirmLabel="New Game"
+          onConfirm={() => { setShowConfirmReset(false); dispatch({ type: 'RESET' }); }}
+          onCancel={() => setShowConfirmReset(false)}
+        />
+      )}
       {gameOver && (
         <WinOverlay
           stage={stage}
@@ -319,18 +332,22 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
-    padding: 12,
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     paddingBottom: 20,
   },
   button: {
     backgroundColor: colors.buttonPrimary,
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     borderRadius: 8,
   },
   resetButton: {
     backgroundColor: colors.buttonReset,
+    borderWidth: 1,
+    borderColor: colors.cellBorder,
   },
   buttonDisabled: {
     opacity: colors.buttonDisabledOpacity,
